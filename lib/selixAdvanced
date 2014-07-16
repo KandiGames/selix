@@ -1,0 +1,94 @@
+(function(w,d,u){
+	    var lineHandler, selix,_target,get;
+		selix = function(elem){ 
+		return new get(elem);
+		};
+		get = function(elem){
+		_target = elem;
+		return this;
+		};
+		selix.fn = get.prototype = {
+			getCaret:function () {
+				var elemRange, end, endRange, start;
+				if (typeof _target.selectionStart === 'number' && typeof _target.selectionEnd === 'number') {
+					this.caret = {
+						start: _target.selectionStart,
+						end: _target.selectionEnd
+					};
+					return this;
+				} else if (document.selection && document.selection.createRange && _target.createTextRange) {
+					elemRange = _target.createTextRange();
+					elemRange.moveToBookmark(document.selection.createRange().getBookmark());
+					endRange = _target.createTextRange();
+					endRange.collapse(false);
+					if (elemRange.compareEndPoints('StartToEnd', endRange) >= 0) {
+						start = end = _target.value.length;
+					} else {
+						start = -elemRange.moveStart('character', -_target.value.length);
+						if (elemRange.compareEndPoints('EndToEnd', endRange) >= 0) {
+							end = _target.value.length;
+						} else {
+							end = -elemRange.moveEnd('character', -_target.value.length);
+						}
+					}
+					this.caret = {
+						start: start,
+						end: end
+						};
+					return this;
+				}
+			},
+			setCaret:function (start, end) {
+				var range;
+				if (end == null) {
+					end = start;
+				}
+				if (typeof _target.selectionStart === 'number' && typeof _target.selectionEnd === 'number') {
+					_target.selectionStart = start;
+					_target.selectionEnd = end;
+				} else if (document.selection && document.selection.createRange && _target.createTextRange) {
+					range = _target.createTextRange();
+					range.collapse(true);
+					range.moveEnd('character', lineHandler(_target, end));
+					range.moveStart('character', lineHandler(_target, start));
+					range.select();
+				}
+				function lineHandler(elem, position) {
+					return position - (elem.value.slice(0, position).split('\r\n').length - 1);
+				}
+				return this;
+			},
+			getText:function(){
+				var caret;
+				var elms;
+				if (_target.value) {
+					caret = this.getCaret(_target);
+					caret = _target.value.slice(caret.caret.start, caret.caret.end);
+				} else {
+					if (window.getSelection) {
+						caret = window.getSelection().toString();
+					} else if (document.selection && document.selection.type != "Control") {
+						caret = document.selection.createRange().text;
+					}
+				}
+				return caret;
+			},
+			setText:function (text) {
+				var caret;
+				caret = this.getCaret(_target);
+				_target.value = _target.value.slice(0, caret.caret.start) + text + _target.value.slice(caret.caret.end);
+				return this;
+			},
+			wrap:function (before, after) {
+				var caret, startPosition, text;
+				caret = this.getCaret(_target);
+				text = this.getText(_target);
+				setText(_target, before + text + after);
+				startPosition = caret.caret.start + before.length;
+				this.setCaret(_target, startPosition, startPosition + text.length);
+				return this;
+			}
+		};
+
+  return (window.selix = selix);
+})(this,document);
